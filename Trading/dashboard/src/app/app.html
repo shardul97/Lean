@@ -1,0 +1,685 @@
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="Stratum research home"
+      ><span class="brand-mark">▥</span
+      ><span>stratum<span class="brand-sub">RESEARCH TERMINAL</span></span></a
+    >
+    <div class="workspace-label">
+      <span class="workspace-avatar">S</span>
+      <div>Personal workspace<small>Local environment</small></div>
+      <span class="local-dot"></span>
+    </div>
+    <div class="nav-caption">RESEARCH</div>
+    <nav aria-label="Main navigation">
+      <button [class.selected]="section() === 'workspace'" (click)="section.set('workspace')">
+        <span>▦</span> Backtest workspace
+      </button>
+      <button [class.selected]="section() === 'compare'" (click)="section.set('compare')">
+        <span>⇄</span> Compare runs <span class="count">{{ runs().length }}</span>
+      </button>
+    </nav>
+    <div class="nav-caption history-label">
+      SAVED RUNS
+      <button class="icon-button" (click)="refresh()" aria-label="Refresh saved runs">↻</button>
+    </div>
+    <div class="run-list">
+      @for (item of runs(); track item.id) {
+        <button
+          class="run-item"
+          [class.active]="selectedId() === item.id"
+          (click)="section.set('workspace'); selectRun(item.id)"
+        >
+          <span class="run-item-top"
+            ><strong>{{ item.symbol }}</strong
+            ><span
+              [class.positive]="(item.statistics?.totalReturn ?? 0) >= 0"
+              [class.negative]="(item.statistics?.totalReturn ?? 0) < 0"
+              >{{
+                item.statistics ? (item.statistics.totalReturn | percent: '1.2-2') : item.status
+              }}</span
+            ></span
+          >
+          <span class="run-name">{{ item.id }}</span><span class="run-period"
+            >{{ item.start }} → {{ item.end }}</span
+          >
+        </button>
+      } @empty {
+        <p class="sidebar-empty">Your completed backtests will appear here.</p>
+      }
+    </div>
+    <div class="sidebar-footer">
+      <span class="engine-dot" [class.online]="apiOnline()"></span
+      >{{ apiOnline() ? 'Local engine connected' : 'Connecting to local API'
+      }}<small>LEAN · C# · Binance spot</small>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div class="breadcrumbs">
+        Research <span>/</span>
+        {{ section() === 'workspace' ? 'Backtest workspace' : 'Compare runs' }}
+      </div>
+      <span class="environment"><span class="local-dot"></span> LOCAL ONLY</span>
+    </header>
+    <div class="content">
+      <div class="page-title">
+        <div>
+          <div class="eyebrow">STRATEGY RESEARCH</div>
+          <h1>
+            {{ section() === 'workspace' ? 'Backtest workspace' : 'Compare your experiments' }}
+          </h1>
+          <p>Turn market observations into measurable results.</p>
+        </div>
+        <button class="primary" (click)="openForm()" [disabled]="!apiOnline()">
+          <span>＋</span> New backtest
+        </button>
+      </div>
+      @if (error()) {
+        <div class="notice error" role="alert">
+          {{ error() }} <button (click)="refresh()">Retry connection</button>
+        </div>
+      }
+      @if (!backtestReady() && apiOnline()) {
+        <div class="notice">
+          You can explore saved results. Build the LEAN binaries with
+          <code>Trading/scripts/dashboard.ps1</code> to start new runs.
+        </div>
+      }
+
+      @if (section() === 'compare') {
+        <section class="panel comparison">
+          <div class="panel-heading">
+            <div>
+              <h2>Run comparison</h2>
+              <p>Results after modeled fees and slippage. Select a row to inspect its trades.</p>
+            </div>
+            <span class="badge">{{ runs().length }} experiments</span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>RUN / SYMBOL</th>
+                  <th>PERIOD (UTC)</th>
+                  <th>STATUS</th>
+                  <th>NET RETURN</th>
+                  <th>MAX DRAWDOWN</th>
+                  <th>CLOSED TRADES</th>
+                  <th>WIN RATE</th>
+                  <th>FEES (USDT)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of runs(); track item.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ item.symbol }}</strong
+                      ><small>{{ item.id }}</small>
+                    </td>
+                    <td>
+                      {{ item.start }}<small>to {{ item.end }}</small>
+                    </td>
+                    <td>
+                      <span
+                        class="status"
+                        [class.completed]="item.status === 'completed'"
+                        [class.failed]="item.status === 'failed'"
+                        >{{ item.status }}</span
+                      >
+                    </td>
+                    <td
+                      [class.negative]="(item.statistics?.totalReturn ?? 0) < 0"
+                      [class.positive]="(item.statistics?.totalReturn ?? 0) >= 0"
+                    >
+                      {{ item.statistics ? (item.statistics.totalReturn | percent: '1.2-2') : '—' }}
+                    </td>
+                    <td>
+                      {{ item.statistics ? (item.statistics.maxDrawdown | percent: '1.2-2') : '—' }}
+                    </td>
+                    <td>{{ item.statistics?.closedTrades ?? '—' }}</td>
+                    <td>
+                      {{ item.statistics ? (item.statistics.winRate | percent: '1.1-1') : '—' }}
+                    </td>
+                    <td>
+                      {{ item.statistics ? (item.statistics.totalFees | number: '1.2-2') : '—' }}
+                    </td>
+                    <td>
+                      <button
+                        class="text-button"
+                        (click)="section.set('workspace'); selectRun(item.id)"
+                      >
+                        Inspect ↗
+                      </button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="9" class="empty-cell">No runs yet. Start your first backtest.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="panel-footnote">
+            Comparing saved runs does not select a holdout winner. Use compare.ps1 for the
+            chronological training and holdout workflow.
+          </p>
+        </section>
+      } @else {
+        @if (loading()) {
+          <div class="empty-state" role="status">
+            <span class="spinner"></span>
+            <h2>Loading your research</h2>
+            <p>Reading saved backtest results…</p>
+          </div>
+        } @else if (detail(); as result) {
+          <section class="run-heading">
+            <div>
+              <span class="pair-icon">{{ result.run.symbol.startsWith('BTC') ? '₿' : '◇' }}</span>
+              <div>
+                <h2>{{ result.run.symbol }} <span>Spot</span></h2>
+                <p>
+                  Candle pressure breakout <span>·</span> {{ result.run.start }} —
+                  {{ result.run.end }} UTC
+                </p>
+              </div>
+            </div>
+            <span
+              class="status"
+              [class.completed]="result.run.status === 'completed'"
+              [class.failed]="result.run.status === 'failed'"
+              ><span>●</span> {{ result.run.status }}</span
+            >
+          </section>
+          <div class="run-meta">
+            <span
+              >RUN <strong>{{ result.run.id }}</strong></span
+            ><span
+              >LOOKBACK <strong>{{ parameter('lookback') }}</strong></span
+            ><span
+              >ENTRY PRESSURE <strong>{{ parameter('entryPressure') }}</strong></span
+            ><span>SIGNAL <strong>5m + 1h</strong></span>
+          </div>
+          @if (result.run.error) {
+            <div class="notice error" role="alert">
+              {{ result.run.error }} Select Execution log below for details.
+            </div>
+          }
+          @if (active()) {
+            <div class="notice working" role="status">
+              <span class="spinner"></span
+              >{{
+                result.run.status === 'queued'
+                  ? 'Your run is queued behind another backtest.'
+                  : 'LEAN is running your backtest.'
+              }}
+              This page updates automatically.
+            </div>
+          }
+
+          @if (stats(); as s) {
+            <section class="metrics" aria-label="Backtest performance">
+              <article class="metric">
+                <span>NET RETURN <span>↗</span></span
+                ><strong
+                  [class.positive]="s.totalReturn >= 0"
+                  [class.negative]="s.totalReturn < 0"
+                  >{{ s.totalReturn | percent: '1.2-2' }}</strong
+                ><small
+                  >{{ s.finalEquity - s.initialEquity | number: '1.2-2' }} USDT net profit</small
+                >
+              </article>
+              <article class="metric">
+                <span>FINAL EQUITY <span>◈</span></span
+                ><strong>{{ s.finalEquity | number: '1.2-2' }} <em>USDT</em></strong
+                ><small>Started with {{ s.initialEquity | number: '1.0-0' }} USDT</small>
+              </article>
+              <article class="metric">
+                <span>MAX DRAWDOWN <span>↘</span></span
+                ><strong>{{ s.maxDrawdown | percent: '1.2-2' }}</strong
+                ><small>Sampled every minute</small>
+              </article>
+              <article class="metric">
+                <span>WIN RATE <span>◎</span></span
+                ><strong>{{ s.winRate | percent: '1.1-1' }}</strong
+                ><small>{{ s.closedTrades }} closed trades · after fees</small>
+              </article>
+            </section>
+          }
+
+          @if (result.candles.length) {
+            <section class="panel market-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>
+                    Price & signals <span class="badge">{{ result.run.symbol }}</span>
+                  </h2>
+                  <p>Historical candles with custom pressure output</p>
+                </div>
+                <div class="timeframes" role="group" aria-label="Chart timeframe">
+                  @for (frame of frames; track frame.minutes) {
+                    <button
+                      [class.active]="minutes() === frame.minutes"
+                      (click)="minutes.set(frame.minutes)"
+                    >
+                      {{ frame.label }}
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="chart-toolbar">
+                <div>
+                  <label
+                    ><input
+                      type="checkbox"
+                      [ngModel]="showSignals()"
+                      (ngModelChange)="showSignals.set($event)"
+                    />
+                    <span class="legend-arrow">↑↓</span> Decisions</label
+                  ><label
+                    ><input
+                      type="checkbox"
+                      [ngModel]="showFills()"
+                      (ngModelChange)="showFills.set($event)"
+                    /><span class="legend-fill">●</span> Fills</label
+                  >
+                </div>
+                <span
+                  >{{
+                    minutes() === 5
+                      ? 'Custom pressure · 5m'
+                      : 'Mean 5m pressure per displayed candle'
+                  }}
+                  <span class="utc-label">UTC</span></span
+                >
+              </div>
+              <app-result-chart
+                [candles]="result.candles"
+                [fills]="result.fills"
+                [minutes]="minutes()"
+                [showSignals]="showSignals()"
+                [showFills]="showFills()"
+              />
+            </section>
+            <section class="panel equity-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Portfolio equity</h2>
+                  <p>Marked portfolio value and drawdown</p>
+                </div>
+                <div class="equity-legend"><span>● Equity</span><span>● Drawdown %</span></div>
+              </div>
+              <app-result-chart kind="equity" [equity]="result.equity" />
+            </section>
+          }
+
+          <section class="panel execution-panel">
+            <div class="execution-header">
+              <div class="tabs" role="tablist" aria-label="Execution results">
+                <button
+                  role="tab"
+                  [attr.aria-selected]="tab() === 'orders'"
+                  [class.active]="tab() === 'orders'"
+                  (click)="setTab('orders')"
+                >
+                  Orders <span>{{ result.orders.length }}</span></button
+                ><button
+                  role="tab"
+                  [attr.aria-selected]="tab() === 'fills'"
+                  [class.active]="tab() === 'fills'"
+                  (click)="setTab('fills')"
+                >
+                  Fills <span>{{ result.fills.length }}</span></button
+                ><button
+                  role="tab"
+                  [attr.aria-selected]="tab() === 'trades'"
+                  [class.active]="tab() === 'trades'"
+                  (click)="setTab('trades')"
+                >
+                  Closed trades <span>{{ result.trades.length }}</span></button
+                ><button
+                  role="tab"
+                  [attr.aria-selected]="tab() === 'log'"
+                  [class.active]="tab() === 'log'"
+                  (click)="setTab('log')"
+                >
+                  Execution log
+                </button>
+              </div>
+              @if (tab() !== 'log' && result.run.statistics) {
+                <a
+                  class="download"
+                  [href]="
+                    download(
+                      tab() === 'orders'
+                        ? 'fills.csv'
+                        : tab() === 'fills'
+                          ? 'fills.csv'
+                          : 'trades.csv'
+                    )
+                  "
+                  >↓ {{ tab() === 'orders' ? 'Fill CSV' : 'Export CSV' }}</a
+                >
+              }
+            </div>
+            @if (tab() === 'log') {
+              <pre class="execution-log">{{
+                log().join('\n') || 'No execution log is available yet.'
+              }}</pre>
+            } @else {
+              <div class="table-tools">
+                <p>
+                  {{
+                    tab() === 'orders'
+                      ? 'Submitted orders and their latest LEAN status.'
+                      : tab() === 'fills'
+                        ? 'Simulated executions, including the time each signal was generated.'
+                        : 'Completed entry/exit pairs with both fees included.'
+                  }}
+                </p>
+                <input
+                  class="search"
+                  aria-label="Filter execution results"
+                  placeholder="Filter results…"
+                  [ngModel]="filter()"
+                  (ngModelChange)="setFilter($event)"
+                />
+              </div>
+              <div class="table-scroll">
+                <table>
+                  @if (tab() === 'orders') {
+                    <thead>
+                      <tr>
+                        <th>ORDER</th>
+                        <th>TIME (UTC)</th>
+                        <th>SIDE</th>
+                        <th>STATUS</th>
+                        <th>QUANTITY</th>
+                        <th>FILL PRICE</th>
+                        <th>FEE (USDT)</th>
+                        <th>REASON</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (order of orders(); track order.orderId) {
+                        <tr>
+                          <td class="mono">#{{ order.orderId }}</td>
+                          <td class="mono">{{ order.time | date: 'MMM d, HH:mm:ss' : 'UTC' }}</td>
+                          <td>
+                            <span class="side" [class.buy]="order.side === 'buy'">{{
+                              order.side
+                            }}</span>
+                          </td>
+                          <td>
+                            <span
+                              class="status"
+                              [class.completed]="order.status === 'filled'"
+                              [class.failed]="order.status === 'invalid'"
+                              >{{ order.status }}</span
+                            >
+                          </td>
+                          <td class="mono">{{ order.quantity | number: '1.0-6' }}</td>
+                          <td class="mono">
+                            {{ order.fillQuantity ? (order.price | number: '1.2-2') : '—' }}
+                          </td>
+                          <td class="mono">{{ order.fee | number: '1.2-4' }}</td>
+                          <td class="reason">{{ order.reason || '—' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  } @else if (tab() === 'fills') {
+                    <thead>
+                      <tr>
+                        <th>ORDER</th>
+                        <th>FILLED (UTC)</th>
+                        <th>SIGNAL (UTC)</th>
+                        <th>DELAY</th>
+                        <th>SIDE</th>
+                        <th>QUANTITY</th>
+                        <th>PRICE</th>
+                        <th>FEE (USDT)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (fill of fills(); track fill.orderId) {
+                        <tr>
+                          <td class="mono">#{{ fill.orderId }}</td>
+                          <td class="mono">{{ fill.time | date: 'MMM d, HH:mm:ss' : 'UTC' }}</td>
+                          <td class="mono">
+                            {{ fill.signalTime | date: 'MMM d, HH:mm:ss' : 'UTC' }}
+                          </td>
+                          <td class="mono">{{ delay(fill) }}s</td>
+                          <td>
+                            <span class="side" [class.buy]="fill.quantity > 0">{{
+                              fill.quantity > 0 ? 'buy' : 'sell'
+                            }}</span>
+                          </td>
+                          <td class="mono">{{ fill.quantity | number: '1.0-6' }}</td>
+                          <td class="mono">{{ fill.price | number: '1.2-2' }}</td>
+                          <td class="mono">{{ fill.fee | number: '1.2-4' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  } @else {
+                    <thead>
+                      <tr>
+                        <th>ENTRY (UTC)</th>
+                        <th>EXIT (UTC)</th>
+                        <th>QUANTITY</th>
+                        <th>ENTRY PRICE</th>
+                        <th>EXIT PRICE</th>
+                        <th>FEES (USDT)</th>
+                        <th>NET P&L (USDT)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (trade of trades(); track trade.entryTime) {
+                        <tr>
+                          <td class="mono">{{ trade.entryTime | date: 'MMM d, HH:mm' : 'UTC' }}</td>
+                          <td class="mono">{{ trade.exitTime | date: 'MMM d, HH:mm' : 'UTC' }}</td>
+                          <td class="mono">{{ trade.quantity | number: '1.0-6' }}</td>
+                          <td class="mono">{{ trade.entryPrice | number: '1.2-2' }}</td>
+                          <td class="mono">{{ trade.exitPrice | number: '1.2-2' }}</td>
+                          <td class="mono">{{ trade.fees | number: '1.2-4' }}</td>
+                          <td
+                            class="mono"
+                            [class.positive]="trade.netProfit > 0"
+                            [class.negative]="trade.netProfit <= 0"
+                          >
+                            {{ trade.netProfit | number: '1.2-2' }}
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  }
+                </table>
+              </div>
+              @if (!tableRows().length) {
+                <div class="table-empty">
+                  <span>∅</span>
+                  <h3>
+                    {{
+                      filter()
+                        ? 'No matching results'
+                        : active()
+                          ? 'Waiting for the backtest'
+                          : 'No ' + (tab() === 'trades' ? 'closed trades' : tab()) + ' in this run'
+                    }}
+                  </h3>
+                  <p>
+                    {{
+                      filter()
+                        ? 'Try a different filter.'
+                        : 'A completed backtest can legitimately finish without placing an order.'
+                    }}
+                  </p>
+                </div>
+              }
+              <div class="pagination">
+                <span
+                  >{{ tableRows().length }} results <span>·</span> Page {{ page() + 1 }} of
+                  {{ pages() }}</span
+                >
+                <div>
+                  <button [disabled]="page() === 0" (click)="page.set(page() - 1)">
+                    ← Previous</button
+                  ><button [disabled]="page() + 1 >= pages()" (click)="page.set(page() + 1)">
+                    Next →
+                  </button>
+                </div>
+              </div>
+            }
+          </section>
+          @if (stats(); as s) {
+            <div class="assumptions">
+              <span>ⓘ</span>
+              <p>
+                Simulation assumptions: 0.10% fee on pre-slippage notional · 0.02% slippage per side
+                · next-minute execution.<br />Open quantity: {{ s.openQuantity | number: '1.0-6' }}
+                {{ result.run.symbol.replace('USDT', '') }} · Total fees:
+                {{ s.totalFees | number: '1.2-2' }} USDT. Open positions remain marked to market.
+              </p>
+              <a [href]="download('statistics.json')">Statistics JSON ↗</a>
+            </div>
+          }
+        } @else if (!error()) {
+          <div class="empty-state">
+            <span class="empty-icon">▥</span>
+            <h2>Your next idea starts here</h2>
+            <p>
+              Run a strategy against historical Binance candles.<br />Saved results, signals and
+              trades will appear in this workspace.
+            </p>
+            <button class="primary" (click)="openForm()">＋ Create your first backtest</button>
+          </div>
+        }
+      }
+      <footer class="page-footer">
+        <span>STRATUM <span> / </span> LOCAL RESEARCH</span
+        ><span
+          >© 2025 TradingView, Inc. · Charts by
+          <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer"
+            >TradingView Lightweight Charts™</a
+          >
+          · All times UTC</span
+        >
+      </footer>
+    </div>
+  </main>
+</div>
+
+<dialog #formDialog class="backtest-dialog" aria-labelledby="dialog-title">
+  <div class="dialog-heading">
+    <div>
+      <div class="eyebrow">NEW EXPERIMENT</div>
+      <h2 id="dialog-title">Configure a backtest</h2>
+      <p>Test your idea on completed historical candles.</p>
+    </div>
+    <button class="close-button" (click)="closeForm()" aria-label="Close new backtest">×</button>
+  </div>
+  <form #form="ngForm" (ngSubmit)="form.valid && submit()">
+    <label class="field"
+      >Strategy<select name="strategyId" [(ngModel)]="request.strategyId" required>
+        @for (strategy of strategies(); track strategy.id) {
+          <option [value]="strategy.id">{{ strategy.name }}</option>
+        }</select
+      ><small
+        >5m signal candles · completed 1h confirmation. New strategies are registered in C#.</small
+      ></label
+    >
+    <label class="field"
+      >Binance spot pair<input
+        name="symbol"
+        [(ngModel)]="request.symbol"
+        pattern="[A-Z0-9]{1,20}USDT"
+        placeholder="BTCUSDT"
+        required
+      /><small>Use a USDT pair present in LEAN's symbol metadata.</small></label
+    >
+    <div class="field-grid">
+      <label class="field"
+        >Start date (UTC)<input
+          type="date"
+          name="start"
+          [(ngModel)]="request.start"
+          [max]="today"
+          required /></label
+      ><label class="field"
+        >End date (UTC)<input
+          type="date"
+          name="end"
+          [(ngModel)]="request.end"
+          [min]="request.start"
+          [max]="today"
+          required
+      /></label>
+    </div>
+    <div class="form-divider">INDICATOR & RISK PARAMETERS</div>
+    <div class="field-grid">
+      <label class="field"
+        >Lookback (5m candles)<input
+          type="number"
+          name="lookback"
+          [(ngModel)]="request.lookback"
+          min="2"
+          max="500"
+          step="1"
+          required /></label
+      ><label class="field"
+        >Entry pressure (0–1)<input
+          type="number"
+          name="entryPressure"
+          [(ngModel)]="request.entryPressure"
+          min="0"
+          max="1"
+          step="0.01"
+          required /></label
+      ><label class="field"
+        >Stop loss fraction (0–1)<input
+          type="number"
+          name="stopLoss"
+          [(ngModel)]="request.stopLoss"
+          min="0.001"
+          max="0.99"
+          step="0.001"
+          required /></label
+      ><label class="field"
+        >Maximum holding bars<input
+          type="number"
+          name="maxHoldingBars"
+          [(ngModel)]="request.maxHoldingBars"
+          min="1"
+          max="10000"
+          step="1"
+          required
+      /></label>
+    </div>
+    <label class="download-option"
+      ><input type="checkbox" name="downloadData" [(ngModel)]="request.downloadData" /><span
+        >Download / verify Binance archives<small
+          >Leave off to use existing converted data. Downloads use public archives; no API
+          keys.</small
+        ></span
+      ></label
+    >
+    @if (formError()) {
+      <div class="notice error" role="alert">{{ formError() }}</div>
+    }
+    <div class="form-note">
+      Runs use 10,000 USDT initial equity and 25% cash per entry. Choose 1–90 complete historical
+      days. Live trading is disabled.
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" (click)="closeForm()">Cancel</button
+      ><button
+        class="primary"
+        type="submit"
+        [disabled]="form.invalid || submitting() || !backtestReady()"
+      >
+        {{ submitting() ? 'Submitting…' : '▶ Run backtest' }}
+      </button>
+    </div>
+  </form>
+</dialog>

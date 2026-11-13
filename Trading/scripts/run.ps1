@@ -4,6 +4,8 @@ param(
     [string]$End = '2025-01-07',
     [int]$Lookback = 6,
     [decimal]$EntryPressure = 0.15,
+    [decimal]$StopLoss = 0.02,
+    [int]$MaxHoldingBars = 24,
     [string]$RunName = 'sample',
     [switch]$SkipBuild,
     [switch]$SkipDownload
@@ -66,7 +68,7 @@ $config['job-user-id'] = '0'
 $config['api-access-token'] = ''
 $config['job-organization-id'] = ''
 $config['poc-lean-commit'] = (& git -C $root rev-parse HEAD)
-$config['parameters'] = @{ symbol = $Symbol; start = $Start; end = $End; lookback = "$Lookback"; 'entry-pressure' = $EntryPressure.ToString([Globalization.CultureInfo]::InvariantCulture) }
+$config['parameters'] = @{ symbol = $Symbol; start = $Start; end = $End; lookback = "$Lookback"; 'entry-pressure' = $EntryPressure.ToString([Globalization.CultureInfo]::InvariantCulture); 'stop-loss' = $StopLoss.ToString([Globalization.CultureInfo]::InvariantCulture); 'max-holding-bars' = "$MaxHoldingBars" }
 $configPath = Join-Path $output 'config.json'
 $config | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $configPath -Encoding utf8
 Push-Location $launcher

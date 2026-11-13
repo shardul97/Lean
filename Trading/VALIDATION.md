@@ -47,3 +47,15 @@ Every tested configuration lost money on the training sample. These runs demonst
 The exported HTML's JavaScript parsed and executed against a local canvas/DOM stub for 144, 288, 576 and all-candle windows. Drawing coordinates were finite, and the hover handler returned the expected candle values. No third-party chart library or network resource is required.
 
 Visual inspection in the browser was **not completed**: the browser tool's security policy disallows `file://` URLs. Open `Trading/artifacts/sample/chart.html` manually in a local browser to review appearance. No browser-policy workaround was attempted.
+
+## Angular dashboard/API validation — 2026-11-13
+
+Added the Angular 21 dashboard and ASP.NET Core 10 local API. This is a new HTTP-served application; the earlier limitation above applies to the standalone file-URL chart.
+
+- Angular production build passed (about 453 kB raw initial bundle, 124 kB estimated transfer); API build passed without warnings/errors.
+- Five frontend tests, eleven API tests and all twenty-one original strategy tests passed (37 total). Coverage includes aggregation/partial periods/weekly boundaries, fill mapping and delay, drawdown, validation, download/path restrictions, queue capacity, restart handling and process arguments.
+- Real browser form submission completed a new BTCUSDT Jan 1–7 backtest: 2,016 five-minute chart candles, 10,081 equity rows, 98 orders/fills, 49 closed trades. Final equity and fees exactly reproduced the original sample.
+- A separate Jan 1 run with entry pressure 1 completed with zero orders/fills/trades and unchanged 10,000 USDT equity. The browser displayed an explicit empty orders state. A weekly view correctly had no complete candles.
+- A request for missing converted Dec 1 data was recorded as failed with a readable execution log. Invalid strategy requests returned HTTP 400. Unknown runs/routes and attempts to download config.json returned HTTP 404.
+- Browser checks confirmed chart rendering, timeframe switching, form submission, automatic status updates, fill filtering/delay, comparison table and zero-trade/partial-period states. Testing used the browser's existing narrow viewport.
+- Status/logs persist under artifacts/.jobs; smoke-run identifiers are recorded in artifacts/dashboard-smoke.json. Generated results remain excluded from Git.

@@ -41,6 +41,8 @@ All 5m, 15m, 1h, 4h, daily, and weekly aggregators use one-minute input. Intrada
 
 ## Requirements
 
+For the Angular results dashboard, backtest form, charts and order/trade tables, see [dashboard/README.md](dashboard/README.md). A single command builds and starts it locally: `pwsh -File Trading/scripts/dashboard.ps1`.
+
 - .NET **10 SDK** (not only the runtime).
 - PowerShell **7.2+** (`pwsh`; Windows PowerShell 5.1 is not supported).
 - This LEAN checkout, including the checked-in `Data/market-hours` and `Data/symbol-properties` directories.
