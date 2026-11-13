@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup><ProjectReference Include="../Trading.Indicators/Trading.Indicators.csproj" /></ItemGroup>
+</Project>
